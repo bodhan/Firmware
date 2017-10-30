@@ -7,20 +7,23 @@ pipeline {
     
   }
   stages {
-    stage('Quick Check') {
+    stage('Quality Checks') {
+      steps {
+        sh '''make check_format'''
+      }
+    }
+    stage('Build') {
       steps {
         sh '''make distclean;
 make posix_sitl_default;'''
       }
     }
-    stage('Deploy') {
+    stage('Generate Metadata') {
       parallel {
         stage('airframe') {
           steps {
             sh 'make airframe_metadata'
             archiveArtifacts 'airframes.md, airframes.xml'
-            sh '''git clone --branch master https://github.com/PX4/Devguide.git
-ls Devguide'''
           }
         }
         stage('parameters') {
@@ -33,6 +36,25 @@ ls Devguide'''
           steps {
             sh 'make module_documentation'
             archiveArtifacts 'modules/*.md'
+          }
+        }
+      }
+    }
+    stage('Test') {
+      steps {
+        sh '''make tests'''
+      }
+    }
+    stage('Deploy') {
+      parallel {
+        stage('User Guide Update') {
+          steps {
+            sh 'git clone https://github.com/PX4/px4_user_guide.git'
+          }
+        }
+        stage('Dev Guide Update') {
+          steps {
+            sh 'git clone https://github.com/PX4/Devguide.git'
           }
         }
       }
